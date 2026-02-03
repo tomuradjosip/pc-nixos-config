@@ -7,6 +7,9 @@
 }:
 
 {
+  # Allow unfree packages (e.g., Google Chrome)
+  nixpkgs.config.allowUnfree = true;
+
   # Enable flakes
   nix.settings.experimental-features = [
     "nix-command"
@@ -33,6 +36,11 @@
     # Disk utilities
     parted
     smartmontools
+
+    # Browsers
+    brave
+    google-chrome
+    firefox
 
     # Custom packages
     (pkgs.callPackage ../packages/system-generation-cleanup.nix { })

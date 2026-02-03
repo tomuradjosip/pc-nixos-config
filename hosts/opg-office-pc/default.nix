@@ -13,6 +13,8 @@ in
     ../../modules/shell.nix
     ../../modules/persistence.nix
     ../../modules/localization.nix
+    ../../modules/desktop.nix
+    ../../modules/home.nix
   ];
 
   # Pass secrets to modules

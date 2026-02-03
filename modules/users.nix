@@ -23,6 +23,7 @@
       "wheel"
       "networkmanager"
       "systemd-journal" # Read logs without sudo
+      "input" # Needed for Sunshine input injection
     ];
     hashedPasswordFile = "/persist/etc/secrets/passwords/${secrets.username}";
     openssh.authorizedKeys.keys = secrets.sshKeys;
@@ -30,8 +31,9 @@
   };
 
   # SSH client configuration
+  # Note: startAgent disabled because GNOME/Cinnamon provide their own SSH agent
   programs.ssh = {
-    startAgent = true;
+    startAgent = false;
     extraConfig = ''
       AddKeysToAgent yes
       IdentitiesOnly yes
