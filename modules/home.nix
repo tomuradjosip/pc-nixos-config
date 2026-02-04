@@ -102,6 +102,59 @@
 
       # Hot corners (optional - Windows 11 doesn't use them by default)
       hotkeys.commands = { };
+
+      # Power management settings
+      powerdevil = {
+        AC = {
+          dimDisplay = {
+            enable = true;
+            idleTimeout = 1200; # 20 minutes
+          };
+          turnOffDisplay = {
+            idleTimeout = 3600; # 1 hour
+          };
+          autoSuspend = {
+            action = "sleep";
+            idleTimeout = 7200; # 2 hours
+          };
+          whenSleepingEnter = "standby";
+        };
+        battery = {
+          dimDisplay = {
+            enable = true;
+            idleTimeout = 1200; # 20 minutes
+          };
+          turnOffDisplay = {
+            idleTimeout = 3600; # 1 hour
+          };
+          autoSuspend = {
+            action = "sleep";
+            idleTimeout = 7200; # 2 hours
+          };
+          whenSleepingEnter = "standby";
+        };
+        lowBattery = {
+          dimDisplay = {
+            enable = true;
+            idleTimeout = 1200; # 20 minutes
+          };
+          turnOffDisplay = {
+            idleTimeout = 3600; # 1 hour
+          };
+          autoSuspend = {
+            action = "sleep";
+            idleTimeout = 7200; # 2 hours
+          };
+          whenSleepingEnter = "standby";
+        };
+      };
+
+      # Disable screen locking entirely (via config file for reliability)
+      configFile."kscreenlockerrc" = {
+        "Daemon"."Autolock" = false;
+        "Daemon"."LockOnResume" = false;
+        "Daemon"."Timeout" = 0; # Never lock after idle
+      };
     };
 
     # Konsole (KDE terminal) configuration
