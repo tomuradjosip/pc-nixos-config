@@ -14,7 +14,7 @@ After your first boot, verify that all systems are working correctly:
 ```bash
 # Check Btrfs filesystem status
 sudo btrfs filesystem show
-sudo btrfs subvolume list /
+sudo btrfs subvolume list /nix
 
 # Verify system generation
 nixos-rebuild list-generations
@@ -25,33 +25,25 @@ journalctl --since "1 hour ago" --priority=err
 
 ### Verify Impermanence
 ```bash
-# Verify the rollback service ran successfully
-journalctl -u rollback.service
+# Verify root is tmpfs (should show tmpfs with size limit)
+mount | grep "on / "
+# Expected output: tmpfs on / type tmpfs (rw,relatime,size=2097152k,mode=755)
 
-# Verify the blank snapshot exists
-sudo mkdir -p /mnt-btrfs
-sudo mount -o subvol=/ /dev/disk/by-id/<your-disk-id>-part2 /mnt-btrfs
-sudo btrfs subvolume list /mnt-btrfs
-# Should show: @root, @root-blank, @nix, @persist
-sudo umount /mnt-btrfs
+# Check Btrfs subvolumes (only @nix and @persist should exist)
+sudo mkdir -p /mnt/btrfs-root
+sudo mount -o subvol=/ /dev/disk/by-id/<your-disk-id>-part2 /mnt/btrfs-root
+sudo btrfs subvolume list /mnt/btrfs-root
+# Should show: @nix, @persist
+sudo umount /mnt/btrfs-root
 
 # Create a test file in root (should disappear after reboot)
 sudo touch /test-impermanence
-
-# Check mounts
-mount | grep btrfs
+ls /test-impermanence  # Should exist
 
 # Reboot and verify the file is gone:
 sudo reboot
 # After reboot:
-ls /test-impermanence  # Should not exist
-```
-
-**Troubleshooting**: If `@root-blank` is missing, create it from a live USB:
-```bash
-sudo mount -o subvol=/ /dev/sdXn /mnt
-sudo btrfs subvolume snapshot -r /mnt/@root /mnt/@root-blank
-sudo umount /mnt
+ls /test-impermanence  # Should not exist (file gone, tmpfs cleared)
 ```
 
 ## System Configuration Verification

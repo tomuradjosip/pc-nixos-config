@@ -1,13 +1,13 @@
 # pc-nixos-config Installation Guide
 
-Single-disk Btrfs setup with impermanence for a desktop PC.
+Single-disk setup with tmpfs root and Btrfs for persistent data.
 
 ## Overview
 
 This setup uses:
 - **Single disk** (SSD or NVMe recommended)
-- **Btrfs** with subvolumes for `/nix` and `/persist`
-- **Impermanence** - root filesystem is reset on every boot
+- **Tmpfs root** - ephemeral RAM-based root filesystem (cleared on reboot)
+- **Btrfs** subvolumes for `/nix` and `/persist` (persistent)
 - **Zram** for swap (no swap partition needed)
 
 ## Disk Layout
@@ -16,10 +16,14 @@ This setup uses:
 Disk: /dev/disk/by-id/<your-disk-id>
 ├── part1: 512MB  - EFI System Partition (FAT32)
 └── part2: rest   - Btrfs partition
-    ├── @root       - Root subvolume (wiped on boot)
-    ├── @root-blank - Read-only pristine snapshot (for rollback)
     ├── @nix        - Nix store (persistent)
     └── @persist    - Persistent data (persistent)
+
+Runtime:
+/              - tmpfs (RAM, 2GB limit, ephemeral)
+├── /nix       - Btrfs @nix subvolume (persistent)
+├── /persist   - Btrfs @persist subvolume (persistent)
+└── /boot      - EFI partition (persistent)
 ```
 
 ## Installation Steps
@@ -128,35 +132,30 @@ sudo mkfs.btrfs -L nixos ${DISK}-part2
 # Mount Btrfs partition
 sudo mount ${DISK}-part2 /mnt
 
-# Create subvolumes
-sudo btrfs subvolume create /mnt/@root
+# Create subvolumes for persistent data only
+# (root will be tmpfs, not on disk)
 sudo btrfs subvolume create /mnt/@nix
 sudo btrfs subvolume create /mnt/@persist
 
-# Create read-only blank snapshot of @root (required for impermanence rollback)
-# This pristine snapshot is restored on every boot
-sudo btrfs subvolume snapshot -r /mnt/@root /mnt/@root-blank
-
-# Verify all subvolumes exist
+# Verify subvolumes exist
 sudo btrfs subvolume list /mnt
-# Should show: @root, @nix, @persist, @root-blank
+# Should show: @nix, @persist
 
 # Unmount
 sudo umount /mnt
 ```
 
-**Important**: The `@root-blank` snapshot is essential. On every boot, the system deletes `@root` and restores it from this pristine snapshot, ensuring a clean root filesystem.
-
 ### Step 8: Mount Filesystems for Installation
 
 ```bash
-# Mount root subvolume
-sudo mount -o subvol=@root,compress=zstd,noatime ${DISK}-part2 /mnt
+# Mount tmpfs as root for installation
+# (this will be the runtime root filesystem)
+sudo mount -t tmpfs -o mode=755,size=2G tmpfs /mnt
 
 # Create mount points
 sudo mkdir -p /mnt/{nix,persist,boot}
 
-# Mount other subvolumes
+# Mount Btrfs subvolumes
 sudo mount -o subvol=@nix,compress=zstd,noatime ${DISK}-part2 /mnt/nix
 sudo mount -o subvol=@persist,compress=zstd,noatime ${DISK}-part2 /mnt/persist
 
@@ -280,7 +279,7 @@ sudo nixos-install --no-root-passwd --impure --flake /mnt/persist/home/$USERNAME
 sudo umount /mnt/boot
 sudo umount /mnt/nix
 sudo umount /mnt/persist
-sudo umount /mnt
+sudo umount /mnt  # unmounts tmpfs
 sudo reboot
 ```
 

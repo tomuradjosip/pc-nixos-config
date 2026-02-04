@@ -1,13 +1,14 @@
-# opg-nixos
+# pc-nixos-config
 
-NixOS desktop configuration with single-disk btrfs and impermanence.
+NixOS desktop configuration with tmpfs root and btrfs persistent storage.
 
 ## Features
 
-- **Single-disk btrfs** with subvolumes
-- **Impermanence** - root filesystem resets on every boot
+- **Tmpfs root** - ephemeral RAM-based root (2GB, cleared on reboot)
+- **Btrfs** subvolumes for `/nix` and `/persist`
+- **Impermanence** - only explicitly persisted data survives reboot
 - **Zram swap** - no swap partition needed
-- **Automated maintenance** - btrfs scrub, balance, trim
+- **SSD trim** - weekly fstrim for SSD optimization
 
 ## Disk Layout
 
@@ -15,9 +16,14 @@ NixOS desktop configuration with single-disk btrfs and impermanence.
 /dev/disk/by-id/<your-disk>
 ├── part1: 512MB  - EFI System Partition
 └── part2: rest   - Btrfs
-    ├── @root       - Root (wiped on boot)
     ├── @nix        - Nix store
     └── @persist    - Persistent data
+
+Runtime:
+/              - tmpfs (RAM)
+├── /nix       - Btrfs @nix
+├── /persist   - Btrfs @persist
+└── /boot      - EFI partition
 ```
 
 ## Installation
@@ -43,13 +49,14 @@ sudo nixos-install --flake /path/to/opg-nixos#opg-nixos
 ## Maintenance
 
 ```bash
-# Check filesystem
+# Check tmpfs root usage
+df -h /
+
+# Check btrfs filesystems
 sudo btrfs filesystem show
-sudo btrfs filesystem df /
+sudo btrfs filesystem df /nix
 
-# Check compression
+# Check compression ratio
 sudo compsize /nix
-
-# Manual scrub
-sudo btrfs scrub start /
+sudo compsize /persist
 ```
