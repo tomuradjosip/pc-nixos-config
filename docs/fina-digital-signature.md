@@ -36,6 +36,15 @@ Smart card and eToken management tools.
 
 To use your smart card/eToken for web authentication (e-Građani, FINA services, etc.), you need to load the PKCS#11 security module in your browser.
 
+**Important:** There are two PKCS#11 libraries available:
+- `/run/current-system/sw/lib/opensc-pkcs11.so` - **OpenSC** (works with Gemalto IDPrime tokens)
+- `/run/current-system/sw/lib/libeToken.so` - **SafeNet** (works with SafeNet eTokens)
+
+Use `pkcs11-tool` to determine which library works with your token:
+```bash
+pkcs11-tool --module /run/current-system/sw/lib/opensc-pkcs11.so -L
+```
+
 ### Firefox
 
 1. Open Firefox
@@ -44,8 +53,8 @@ To use your smart card/eToken for web authentication (e-Građani, FINA services,
 4. Click **Security Devices...**
 5. Click **Load**
 6. Enter:
-   - **Module Name:** `FINA eToken` (or any name you prefer)
-   - **Module filename:** `/run/current-system/sw/lib/libeToken.so`
+   - **Module Name:** `Gemalto IDPrime` (or any name you prefer)
+   - **Module filename:** `/run/current-system/sw/lib/opensc-pkcs11.so`
 7. Click **OK**
 
 Your smart card certificates should now appear when accessing sites that require authentication.
@@ -65,8 +74,8 @@ Run these commands once to register the PKCS#11 module:
 mkdir -p ~/.pki/nssdb
 certutil -d sql:$HOME/.pki/nssdb -N --empty-password
 
-# Add the PKCS#11 module
-modutil -dbdir sql:$HOME/.pki/nssdb -add "FINA eToken" -libfile /run/current-system/sw/lib/libeToken.so
+# Add the PKCS#11 module (use opensc-pkcs11.so for Gemalto IDPrime)
+modutil -dbdir sql:$HOME/.pki/nssdb -add "Gemalto IDPrime" -libfile /run/current-system/sw/lib/opensc-pkcs11.so
 ```
 
 To verify it's loaded:
@@ -76,7 +85,7 @@ modutil -dbdir sql:$HOME/.pki/nssdb -list
 
 To remove it later (if needed):
 ```bash
-modutil -dbdir sql:$HOME/.pki/nssdb -delete "FINA eToken"
+modutil -dbdir sql:$HOME/.pki/nssdb -delete "Gemalto IDPrime"
 ```
 
 ## Troubleshooting
@@ -99,6 +108,14 @@ modutil -dbdir sql:$HOME/.pki/nssdb -delete "FINA eToken"
    pcsc_scan
    ```
    Press `Ctrl+C` to exit.
+
+4. **If you get "Access denied":**
+   
+   This means your user doesn't have permission to access pcscd. Verify polkit rules are configured in `modules/packages.nix` and that you're in the `wheel` group:
+   ```bash
+   groups  # should include 'wheel'
+   ```
+   After adding polkit rules, rebuild and log out/in for changes to take effect.
 
 ### "No certificates found" in browser
 
@@ -127,7 +144,8 @@ Enter your PIN when prompted to verify the token works.
 
 | Item | Path |
 |------|------|
-| PKCS#11 Library | `/run/current-system/sw/lib/libeToken.so` |
+| OpenSC PKCS#11 Library | `/run/current-system/sw/lib/opensc-pkcs11.so` |
+| SafeNet PKCS#11 Library | `/run/current-system/sw/lib/libeToken.so` |
 | SafeNet config | `/run/current-system/sw/etc/eToken.conf` |
 | SignErgy home | `/run/current-system/sw/share/signergy-fina/` |
 
