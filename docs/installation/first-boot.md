@@ -25,14 +25,33 @@ journalctl --since "1 hour ago" --priority=err
 
 ### Verify Impermanence
 ```bash
+# Verify the rollback service ran successfully
+journalctl -u rollback.service
+
+# Verify the blank snapshot exists
+sudo mkdir -p /mnt-btrfs
+sudo mount -o subvol=/ /dev/disk/by-id/<your-disk-id>-part2 /mnt-btrfs
+sudo btrfs subvolume list /mnt-btrfs
+# Should show: @root, @root-blank, @nix, @persist
+sudo umount /mnt-btrfs
+
 # Create a test file in root (should disappear after reboot)
 sudo touch /test-impermanence
 
 # Check mounts
 mount | grep btrfs
 
-# After reboot, verify the file is gone:
+# Reboot and verify the file is gone:
+sudo reboot
+# After reboot:
 ls /test-impermanence  # Should not exist
+```
+
+**Troubleshooting**: If `@root-blank` is missing, create it from a live USB:
+```bash
+sudo mount -o subvol=/ /dev/sdXn /mnt
+sudo btrfs subvolume snapshot -r /mnt/@root /mnt/@root-blank
+sudo umount /mnt
 ```
 
 ## System Configuration Verification

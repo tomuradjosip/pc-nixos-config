@@ -17,6 +17,7 @@ Disk: /dev/disk/by-id/<your-disk-id>
 ├── part1: 512MB  - EFI System Partition (FAT32)
 └── part2: rest   - Btrfs partition
     ├── @root       - Root subvolume (wiped on boot)
+    ├── @root-blank - Read-only pristine snapshot (for rollback)
     ├── @nix        - Nix store (persistent)
     └── @persist    - Persistent data (persistent)
 ```
@@ -132,9 +133,19 @@ sudo btrfs subvolume create /mnt/@root
 sudo btrfs subvolume create /mnt/@nix
 sudo btrfs subvolume create /mnt/@persist
 
+# Create read-only blank snapshot of @root (required for impermanence rollback)
+# This pristine snapshot is restored on every boot
+sudo btrfs subvolume snapshot -r /mnt/@root /mnt/@root-blank
+
+# Verify all subvolumes exist
+sudo btrfs subvolume list /mnt
+# Should show: @root, @nix, @persist, @root-blank
+
 # Unmount
 sudo umount /mnt
 ```
+
+**Important**: The `@root-blank` snapshot is essential. On every boot, the system deletes `@root` and restores it from this pristine snapshot, ensuring a clean root filesystem.
 
 ### Step 8: Mount Filesystems for Installation
 

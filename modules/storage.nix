@@ -17,31 +17,40 @@
   boot.initrd.kernelModules = [ "btrfs" ];
   boot.supportedFilesystems = [ "btrfs" ];
 
+  # Enable systemd in initrd for proper service ordering
+  boot.initrd.systemd.enable = true;
+
   # Impermanence setup - rollback btrfs root subvolume on boot
-  boot.initrd.postDeviceCommands = lib.mkAfter ''
-    # Wait for disk to be available
-    DISK="/dev/disk/by-id/${secrets.diskIds.osDisk}"
-    while [ ! -e "$DISK" ]; do
-      echo "Waiting for disk $DISK..."
-      sleep 1
-    done
+  # Based on: https://notashelf.dev/posts/impermanence
+  boot.initrd.systemd.services.rollback = {
+    description = "Rollback BTRFS root subvolume to a pristine state";
+    wantedBy = [ "initrd.target" ];
+    after = [ "dev-disk-by\\x2did-${secrets.diskIds.osDisk}\\x2dpart2.device" ];
+    before = [ "sysroot.mount" ];
+    unitConfig.DefaultDependencies = "no";
+    serviceConfig.Type = "oneshot";
+    script = ''
+      mkdir -p /mnt
 
-    # Mount the btrfs root temporarily
-    mkdir -p /mnt-btrfs
-    mount -t btrfs -o subvol=/ "$DISK-part2" /mnt-btrfs
+      # Mount the BTRFS root to /mnt so we can manipulate subvolumes
+      mount -o subvol=/ /dev/disk/by-id/${secrets.diskIds.osDisk}-part2 /mnt
 
-    # Delete old root subvolume if exists and create fresh one
-    if [ -d /mnt-btrfs/@root ]; then
-      echo "Deleting old @root subvolume..."
-      btrfs subvolume delete /mnt-btrfs/@root
-    fi
+      # Delete nested subvolumes first (NixOS creates /var/lib/portables, /var/lib/machines)
+      btrfs subvolume list -o /mnt/@root |
+        cut -f9 -d' ' |
+        while read subvolume; do
+          echo "Deleting /$subvolume subvolume..."
+          btrfs subvolume delete "/mnt/$subvolume"
+        done &&
+        echo "Deleting @root subvolume..." &&
+        btrfs subvolume delete /mnt/@root
 
-    echo "Creating fresh @root subvolume..."
-    btrfs subvolume create /mnt-btrfs/@root
+      echo "Restoring blank @root subvolume..."
+      btrfs subvolume snapshot /mnt/@root-blank /mnt/@root
 
-    umount /mnt-btrfs
-    rmdir /mnt-btrfs
-  '';
+      umount /mnt
+    '';
+  };
 
   fileSystems = {
     "/" = {
