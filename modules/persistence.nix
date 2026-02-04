@@ -2,7 +2,6 @@
   config,
   pkgs,
   lib,
-  secrets,
   ...
 }:
 
@@ -18,17 +17,10 @@
       "/var/lib/systemd" # Systemd state and journal data
       "/var/lib/NetworkManager" # NetworkManager state and interface info
       "/etc/NetworkManager/system-connections" # Saved WiFi passwords and network configs
-      # User-specific directories
-      "/home/${secrets.username}/.config" # Application configurations
-      "/home/${secrets.username}/.local" # Local data and state
-      "/home/${secrets.username}/.ssh" # SSH keys and configuration
-      "/home/${secrets.username}/.cursor" # Cursor IDE cache and settings
-      "/home/${secrets.username}/.cursor-server" # Cursor server files
-      "/home/${secrets.username}/pc-nixos-config" # NixOS configuration
+      "/home" # User home directories (all user data and application settings)
     ];
     files = [
       "/etc/machine-id" # Unique system identifier used by many services
-      "/home/${secrets.username}/.zsh_history" # Zsh command history
     ];
   };
 }
